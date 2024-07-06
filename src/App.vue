@@ -1,180 +1,219 @@
 <script setup>
-// document.getElementById('viewButton').addEventListener('click', function() {
-//   const canvas = document.getElementById('imageCanvas');
-//   const ctx = canvas.getContext('2d');
-//
-//   const imageInput = document.getElementById('imageInput');
-//   const textInput = document.getElementById('textInput').value.split('\n'); // Chia nhiều dòng text
-//   const xCoord = parseInt(document.getElementById('xCoord').value, 10);
-//   const yCoord = parseInt(document.getElementById('yCoord').value, 10);
-//   const fontSize = parseInt(document.getElementById('fontSize').value, 10);
-//   const fontColor = document.getElementById('fontColor').value;
-//   const fontFamily = document.getElementById('fontFamily').value;
-//
-//   const image = new Image();
-//   image.src = URL.createObjectURL(imageInput.files[0]);
-//
-//   image.onload = function() {
-//     canvas.width = image.width;
-//     canvas.height = image.height;
-//     ctx.drawImage(image, 0, 0);
-//     ctx.font = `${fontSize}px ${fontFamily}`;
-//     ctx.fillStyle = fontColor;
-//     ctx.fillText(textInput[0], xCoord, yCoord); // Chỉ hiển thị dòng đầu tiên
-//   }
-// });
-//
-// document.getElementById('downloadButton').addEventListener('click', function() {
-//   const imageInput = document.getElementById('imageInput');
-//   const textInput = document.getElementById('textInput').value.split('\n'); // Chia nhiều dòng text
-//   const statusDiv = document.getElementById('status');
-//
-//   statusDiv.innerHTML = `Đang tải 0 / ${textInput.length} ảnh...`;
-//
-//   const image = new Image();
-//   image.src = URL.createObjectURL(imageInput.files[0]);
-//
-//   image.onload = function() {
-//     let downloadCount = 0;
-//
-//     const downloadImage = (text, index) => {
-//       // Tạo một canvas tạm thời với kích thước gốc của ảnh
-//       const tempCanvas = document.createElement('canvas');
-//       const tempCtx = tempCanvas.getContext('2d');
-//
-//       tempCanvas.width = image.width;
-//       tempCanvas.height = image.height;
-//       tempCtx.drawImage(image, 0, 0);
-//
-//       // Lấy lại các giá trị để chèn chữ
-//       const xCoord = parseInt(document.getElementById('xCoord').value, 10);
-//       const yCoord = parseInt(document.getElementById('yCoord').value, 10);
-//       const fontSize = parseInt(document.getElementById('fontSize').value, 10);
-//       const fontColor = document.getElementById('fontColor').value;
-//       const fontFamily = document.getElementById('fontFamily').value;
-//
-//       tempCtx.font = `${fontSize}px ${fontFamily}`;
-//       tempCtx.fillStyle = fontColor;
-//       tempCtx.fillText(text, xCoord, yCoord);
-//
-//       // Tải ảnh với tên file theo text nhập
-//       const link = document.createElement('a');
-//       link.href = tempCanvas.toDataURL();
-//       link.download = `${text}.png`;
-//       link.click();
-//
-//       // Cập nhật bộ đếm
-//       downloadCount++;
-//       statusDiv.innerHTML = `Đang tải ${downloadCount} / ${textInput.length} ảnh...`;
-//
-//       // Thông báo khi hoàn tất
-//       if (downloadCount === textInput.length) {
-//         statusDiv.innerHTML = `Đã tải xong ${downloadCount} ảnh.`;
-//       } else {
-//         // Đợi một khoảng thời gian ngắn trước khi tải ảnh tiếp theo
-//         setTimeout(() => downloadImage(textInput[downloadCount], downloadCount), 500);
-//       }
-//     };
-//
-//     // Bắt đầu tải ảnh đầu tiên
-//     downloadImage(textInput[0], 0);
-//   };
-// });
+import { ref, computed, watch } from 'vue'
+
+import { useToast } from 'primevue/usetoast'
+const toast = useToast()
+
+const xCoordRef = ref(1000)
+const yCoordRef = ref(1000)
+const fontSizeRef = ref(100)
+const fontColorRef = ref('#000000')
+const fontFamilyRef = ref('DFVNHelloHoney')
+const textInputRef = ref()
+const canvasRef = ref()
+const downloadCountRef = ref(0)
+const fileSelectedRef = ref()
+const fonts = ref([
+  'DFVNHelloHoney',
+  'UVF-WazaLTPro',
+  'LNTH-HotelLorint',
+  'Arial',
+  'Courier New',
+  'Georgia',
+  'Times New Roman',
+  'Verdana'
+])
+
+const textInputComputed = computed(() => {
+  if (textInputRef.value) {
+    return textInputRef.value.split('\n').filter(Boolean)
+  }
+  return ''
+})
+
+watch(
+  [xCoordRef, yCoordRef, fontSizeRef, fontColorRef, fontFamilyRef, textInputRef, fileSelectedRef],
+  async () => {
+    preview()
+  }
+)
+
+function validate(checkTextInput = false) {
+  if (!xCoordRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập tọa độ X', life: 3000 })
+    return false
+  }
+
+  if (!yCoordRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập tọa độ Y', life: 3000 })
+    return false
+  }
+
+  if (!fontSizeRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập Font Size', life: 3000 })
+    return false
+  }
+
+  if (!fontColorRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn Màu', life: 3000 })
+    return false
+  }
+
+  if (!fontFamilyRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn Font', life: 3000 })
+    return false
+  }
+
+  if (checkTextInput && !textInputRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập Text', life: 3000 })
+    return false
+  }
+
+  if (!fileSelectedRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn File', life: 3000 })
+    return false
+  }
+  return true
+}
+
+function fileChange(e) {
+  let files = e.target.files || e.dataTransfer.files
+  fileSelectedRef.value = files[0]
+}
+
+function preview() {
+  if (!validate()) {
+    return
+  }
+
+  const ctx = canvasRef.value.getContext('2d')
+
+  const image = new Image()
+  image.src = URL.createObjectURL(fileSelectedRef.value)
+
+  image.onload = function () {
+    canvasRef.value.width = image.width
+    canvasRef.value.height = image.height
+    ctx.drawImage(image, 0, 0)
+    ctx.font = `${fontSizeRef.value}px ${fontFamilyRef.value}`
+    ctx.fillStyle = fontColorRef.value
+    ctx.fillText(textInputComputed.value[0] || 'Nguyen Van A', xCoordRef.value, yCoordRef.value)
+  }
+}
+
+function download() {
+  downloadCountRef.value = 0
+  if (!validate(true)) {
+    return
+  }
+
+  const image = new Image()
+  image.src = URL.createObjectURL(fileSelectedRef.value)
+
+  image.onload = async function () {
+    for (const textInput of textInputComputed.value) {
+      await handleDownloadImage(image, textInput)
+    }
+  }
+}
+
+function handleDownloadImage(image, textInput) {
+  return new Promise((resolve) => {
+    setTimeout(function () {
+      const tempCanvas = document.createElement('canvas')
+      const tempCtx = tempCanvas.getContext('2d')
+      tempCanvas.width = image.width
+      tempCanvas.height = image.height
+      tempCtx.drawImage(image, 0, 0)
+      tempCtx.font = `${fontSizeRef.value}px ${fontFamilyRef.value}`
+      tempCtx.fillStyle = fontColorRef.value
+      tempCtx.fillText(textInputComputed.value[0], xCoordRef.value, yCoordRef.value)
+
+      const link = document.createElement('a')
+      link.href = tempCanvas.toDataURL()
+      link.download = `${textInput}.png`
+      link.click()
+
+      downloadCountRef.value++
+
+      return resolve()
+    }, 500)
+  })
+}
 </script>
 
 <template>
-  <div class="container mt-5">
-    <div class="form-container">
-      <h2 class="text-center">Chèn chữ vào ảnh</h2>
-      <p>
-        Vui lòng nhập các thông tin tọa độ x (lề trái), y (lề trên), size ( kích thước chữ), màu
-        sắc, font chữ, file ảnh. Và ấn xem ảnh để điều chỉnh lại các thông số cho phù hợp nhé. Muốn
-        thêm font cá nhân nào thì liên hệ 0987454321 để mình hỗ trợ thêm nhé ! Happy Day !
-      </p>
-      <form>
-        <!-- Tọa độ X, Y và kích thước chữ trên cùng một hàng -->
-        <div class="form-row">
-          <div class="form-group col-4">
-            <input
-              type="number"
-              class="form-control"
-              id="xCoord"
-              placeholder="Lề Trái - Tọa độ X"
-            />
-          </div>
-          <div class="form-group col-4">
-            <input
-              type="number"
-              class="form-control"
-              id="yCoord"
-              placeholder="Lề Trên - Tọa độ Y"
-            />
-          </div>
-          <div class="form-group col-4">
-            <input
-              type="number"
-              class="form-control"
-              id="fontSize"
-              placeholder="Size - Kích thước chữ (px)"
-            />
-          </div>
-        </div>
-        <!-- Màu và font chữ trên cùng một hàng -->
-        <div class="form-row">
-          <div class="form-group col-2">
-            <input type="color" class="form-control" id="fontColor" value="#000000" />
-          </div>
-          <div class="form-group col-10">
-            <select class="form-control" id="fontFamily">
-              <option value="DFVNHelloHoney">DFVNHelloHoney</option>
-              <option value="UVF-WazaLTPro">UVF-WazaLTPro</option>
-              <option value="LNTH-HotelLorint">LNTH-HotelLorint</option>
-              <option value="Arial">Arial</option>
-              <option value="Courier New">Courier New</option>
-              <option value="Georgia">Georgia</option>
-              <option value="Times New Roman">Times New Roman</option>
-              <option value="Verdana">Verdana</option>
-              <option value="DFVNHelloHoney">DFVNHelloHoney</option>
-            </select>
-          </div>
-        </div>
-        <!-- Ô nhập file -->
-        <div class="form-row">
-          <div class="form-group col-12">
-            <input type="file" class="form-control-file" id="imageInput" accept="image/*" />
-          </div>
-        </div>
-        <!-- Ô nhập text -->
-        <div class="form-row">
-          <div class="form-group col-12">
-            <textarea
-              class="form-control"
-              id="textInput"
-              placeholder="Muốn làm nhiều ảnh thì mỗi text 1 dòng là dc. Ví dụ:
-      anh A 
-      chị B
-      p/s: để mượt nhất nên để list max khoảng 20 người / 1 lần"
-              rows="5"
-              style="white-space: pre-line"
-            ></textarea>
-          </div>
-        </div>
-        <!-- Nút xem và tải -->
-        <div class="form-group text-center">
-          <button type="button" class="btn btn-primary" id="viewButton">Xem</button>
-          <button type="button" class="btn btn-success" id="downloadButton">Tải ảnh</button>
-        </div>
-        <!-- Trạng thái -->
-        <div class="form-group text-center">
-          <div id="status"></div>
-        </div>
-      </form>
+  <Toast />
+  <div class="container mt-5 mx-auto shadow rounded-md bg-white p-5">
+    <div>
+      <h2 class="text-center text-4xl font-bold">Chèn chữ vào ảnh</h2>
+      <Message severity="secondary" class="mt-4">
+        <slot>
+          <p class="text-sm">
+            Nhập các thông tin tọa độ x (lề trái), y (lề trên), size ( kích thước chữ), màu sắc,
+            font chữ, file ảnh
+            <br />
+            Bấm xem ảnh để điều chỉnh lại các thông số cho phù hợp
+          </p>
+        </slot>
+      </Message>
+      <div class="gap-8 md:gap-5 flex items-center flex-wrap mt-7">
+        <FloatLabel>
+          <InputNumber id="xCoord" v-model.number="xCoordRef" showButtons inputClass="w-[120px]" />
+          <label for="xCoord">Tọa độ X</label>
+        </FloatLabel>
+        <FloatLabel>
+          <InputNumber id="yCoord" v-model.number="yCoordRef" showButtons inputClass="w-[120px]" />
+          <label for="yCoord">Tọa độ Y</label>
+        </FloatLabel>
+        <FloatLabel>
+          <InputNumber
+            id="fontSize"
+            v-model.number="fontSizeRef"
+            showButtons
+            inputClass="w-[120px]"
+          />
+          <label for="fontSize">Size</label>
+        </FloatLabel>
+        <FloatLabel>
+          <Select id="fontFamily" v-model="fontFamilyRef" :options="fonts" class="w-[200px]" />
+          <label for="fontFamily">Font</label>
+        </FloatLabel>
+        <input id="color" type="color" v-model.lazy="fontColorRef" />
+        <input type="file" accept="image/*" @change="fileChange" />
+      </div>
+
+      <div class="mt-4 w-full">
+        <Textarea
+          class="w-full"
+          v-model="textInputRef"
+          rows="5"
+          placeholder="Muốn tạo nhiều ảnh thì mỗi text 1 dòng
+          Ví dụ:
+      anh A
+      chị B"
+          style="white-space: pre-line"
+        />
+      </div>
+
+      <div class="columns-1 mt-4 flex justify-center flex-wrap">
+        <Button label="Tải ảnh" severity="success" @click="download" />
+      </div>
+
+      <ProgressBar
+        :value="Math.ceil((downloadCountRef / textInputComputed.length) * 100)"
+        class="w-full mt-4"
+        v-if="downloadCountRef"
+      >
+        Đang tải {{ downloadCountRef }} / {{ textInputComputed.length }} ảnh...
+      </ProgressBar>
     </div>
-    <!-- Canvas -->
-    <div class="canvas-container text-center mt-4">
-      <canvas id="imageCanvas" class="border"></canvas>
+    <div class="mt-4">
+      <canvas
+        v-show="fileSelectedRef"
+        class="w-11/12 border h-auto mx-auto"
+        ref="canvasRef"
+      ></canvas>
     </div>
   </div>
 </template>
-
-<style scoped></style>
