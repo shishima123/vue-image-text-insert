@@ -1,18 +1,17 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 
 import { useToast } from 'primevue/usetoast'
 const toast = useToast()
 
-const xCoordRef = ref(1000)
-const yCoordRef = ref(1000)
-const fontSizeRef = ref(100)
-const fontColorRef = ref('#000000')
-const fontFamilyRef = ref('DFVNHelloHoney')
 const textInputRef = ref()
 const canvasRef = ref()
 const downloadCountRef = ref(0)
 const fileSelectedRef = ref()
+const positionsRef = ref([{ x: 0, y: 0, size: 100, font: 'DFVNHelloHoney', color: '#ff0000' }])
+const positionSelectedRef = ref()
+const visibleImagePickerRef = ref(false)
+const imagePickerRef = ref()
 const fonts = ref([
   'DFVNHelloHoney',
   'UVF-WazaLTPro',
@@ -26,44 +25,30 @@ const fonts = ref([
 
 const textInputComputed = computed(() => {
   if (textInputRef.value) {
-    return textInputRef.value.split('\n').filter(Boolean)
+    let textSplit = []
+    let split = textInputRef.value.split('\n').filter(Boolean)
+    split.forEach((item) => {
+      let arr = item.split('|').filter(Boolean)
+      textSplit.push(arr)
+    })
+    return textSplit
   }
   return ''
 })
 
+watch([textInputRef, fileSelectedRef], async () => {
+  preview()
+})
+
 watch(
-  [xCoordRef, yCoordRef, fontSizeRef, fontColorRef, fontFamilyRef, textInputRef, fileSelectedRef],
+  positionsRef,
   async () => {
     preview()
-  }
+  },
+  { deep: true }
 )
 
 function validate(checkTextInput = false) {
-  if (!xCoordRef.value) {
-    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập tọa độ X', life: 3000 })
-    return false
-  }
-
-  if (!yCoordRef.value) {
-    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập tọa độ Y', life: 3000 })
-    return false
-  }
-
-  if (!fontSizeRef.value) {
-    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập Font Size', life: 3000 })
-    return false
-  }
-
-  if (!fontColorRef.value) {
-    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn Màu', life: 3000 })
-    return false
-  }
-
-  if (!fontFamilyRef.value) {
-    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn Font', life: 3000 })
-    return false
-  }
-
   if (checkTextInput && !textInputRef.value) {
     toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập Text', life: 3000 })
     return false
@@ -73,6 +58,34 @@ function validate(checkTextInput = false) {
     toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn File', life: 3000 })
     return false
   }
+
+  for (const position of positionsRef.value) {
+    if (position.x === null || position.x === undefined || position.x === '') {
+      toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập tọa độ X', life: 3000 })
+      return false
+    }
+
+    if (position.y === null || position.y === undefined || position.y === '') {
+      toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập tọa độ Y', life: 3000 })
+      return false
+    }
+
+    if (!position.size) {
+      toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa nhập Font Size', life: 3000 })
+      return false
+    }
+
+    if (!position.color) {
+      toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn Màu', life: 3000 })
+      return false
+    }
+
+    if (!position.font) {
+      toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn Font', life: 3000 })
+      return false
+    }
+  }
+
   return true
 }
 
@@ -82,6 +95,7 @@ function fileChange(e) {
 }
 
 function preview() {
+  downloadCountRef.value = 0
   if (!validate()) {
     return
   }
@@ -95,9 +109,15 @@ function preview() {
     canvasRef.value.width = image.width
     canvasRef.value.height = image.height
     ctx.drawImage(image, 0, 0)
-    ctx.font = `${fontSizeRef.value}px ${fontFamilyRef.value}`
-    ctx.fillStyle = fontColorRef.value
-    ctx.fillText(textInputComputed.value[0] || 'Nguyen Van A', xCoordRef.value, yCoordRef.value)
+    positionsRef.value.forEach((position, index) => {
+      ctx.font = `${position.size}px ${position.font}`
+      ctx.fillStyle = position.color
+      ctx.fillText(
+        textInputComputed.value[0]?.[index] || `Text ${index + 1}`,
+        position.x,
+        position.y
+      )
+    })
   }
 }
 
@@ -114,6 +134,12 @@ function download() {
     for (const textInput of textInputComputed.value) {
       await handleDownloadImage(image, textInput)
     }
+    toast.add({
+      severity: 'success',
+      summary: 'Hoàn thành',
+      detail: 'Tất cả ảnh đã được tải về',
+      life: 3000
+    })
   }
 }
 
@@ -125,9 +151,11 @@ function handleDownloadImage(image, textInput) {
       tempCanvas.width = image.width
       tempCanvas.height = image.height
       tempCtx.drawImage(image, 0, 0)
-      tempCtx.font = `${fontSizeRef.value}px ${fontFamilyRef.value}`
-      tempCtx.fillStyle = fontColorRef.value
-      tempCtx.fillText(textInputComputed.value[0], xCoordRef.value, yCoordRef.value)
+      positionsRef.value.forEach((position, index) => {
+        tempCtx.font = `${position.size}px ${position.font}`
+        tempCtx.fillStyle = position.color
+        tempCtx.fillText(textInput?.[index] || '', position.x, position.y)
+      })
 
       const link = document.createElement('a')
       link.href = tempCanvas.toDataURL()
@@ -140,50 +168,44 @@ function handleDownloadImage(image, textInput) {
     }, 500)
   })
 }
+
+function handleAddPosition() {
+  positionsRef.value.push({
+    x: 0,
+    y: 0,
+    size: 50,
+    font: 'DFVNHelloHoney',
+    color: '#ff0000'
+  })
+}
+
+function handleMouseMove(event) {
+  positionsRef.value[positionSelectedRef.value].x = event.pageX - event.target.offsetLeft
+  positionsRef.value[positionSelectedRef.value].y = event.pageY - event.target.offsetTop
+  visibleImagePickerRef.value = false
+}
+
+async function handlePickPosition(index) {
+  if (!fileSelectedRef.value) {
+    toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn File', life: 3000 })
+    return false
+  }
+  visibleImagePickerRef.value = true
+  positionSelectedRef.value = index
+  await nextTick()
+  imagePickerRef.value.src = URL.createObjectURL(fileSelectedRef.value)
+}
 </script>
 
 <template>
   <Toast />
-  <div class="container mt-5 mx-auto shadow rounded-md bg-white p-5">
-    <div>
-      <h2 class="text-center text-4xl font-bold">Chèn chữ vào ảnh</h2>
-      <Message severity="secondary" class="mt-4">
-        <slot>
-          <p class="text-sm">
-            Nhập các thông tin tọa độ x (lề trái), y (lề trên), size ( kích thước chữ), màu sắc,
-            font chữ, file ảnh
-            <br />
-            Bấm xem ảnh để điều chỉnh lại các thông số cho phù hợp
-          </p>
-        </slot>
-      </Message>
-      <div class="gap-8 md:gap-5 flex items-center flex-wrap mt-7">
-        <FloatLabel>
-          <InputNumber id="xCoord" v-model.number="xCoordRef" showButtons inputClass="w-[120px]" />
-          <label for="xCoord">Tọa độ X</label>
-        </FloatLabel>
-        <FloatLabel>
-          <InputNumber id="yCoord" v-model.number="yCoordRef" showButtons inputClass="w-[120px]" />
-          <label for="yCoord">Tọa độ Y</label>
-        </FloatLabel>
-        <FloatLabel>
-          <InputNumber
-            id="fontSize"
-            v-model.number="fontSizeRef"
-            showButtons
-            inputClass="w-[120px]"
-          />
-          <label for="fontSize">Size</label>
-        </FloatLabel>
-        <FloatLabel>
-          <Select id="fontFamily" v-model="fontFamilyRef" :options="fonts" class="w-[200px]" />
-          <label for="fontFamily">Font</label>
-        </FloatLabel>
-        <input id="color" type="color" v-model.lazy="fontColorRef" />
-        <input type="file" accept="image/*" @change="fileChange" />
-      </div>
 
-      <div class="mt-4 w-full">
+  <div class="container mt-5 mx-auto shadow rounded-md bg-white p-5">
+    <h2 class="text-center text-4xl font-bold mb-4">Chèn chữ vào ảnh</h2>
+    <div class="w-full">
+      <input class="mb-4" type="file" accept="image/*" @change="fileChange" />
+
+      <div class="w-full mb-4">
         <Textarea
           class="w-full"
           v-model="textInputRef"
@@ -196,8 +218,67 @@ function handleDownloadImage(image, textInput) {
         />
       </div>
 
-      <div class="columns-1 mt-4 flex justify-center flex-wrap">
-        <Button label="Tải ảnh" severity="success" @click="download" />
+      <div class="grid grid-cols-1 gap-3 mb-3">
+        <div
+          class="flex gap-3 items-center flex-wrap"
+          v-for="(position, index) in positionsRef"
+          :key="index"
+        >
+          <span class="font-bold block"> Vị trí {{ index + 1 }} </span>
+          <InputNumber
+            id="xCoord"
+            v-model.number="position.x"
+            showButtons
+            inputClass="w-[100px]"
+            :min="0"
+          />
+
+          <InputNumber
+            id="yCoord"
+            v-model.number="position.y"
+            showButtons
+            inputClass="w-[100px]"
+            :min="0"
+          />
+
+          <InputNumber
+            id="fontSize"
+            v-model.number="position.size"
+            showButtons
+            inputClass="w-[75px]"
+            :min="1"
+          />
+
+          <Select id="fontFamily" v-model="position.font" :options="fonts" class="w-[220px]" />
+
+          <input
+            id="color"
+            type="color"
+            v-model.lazy="position.color"
+            class="block h-[40px] px-2 py-1 w-[70px]"
+          />
+
+          <Button
+            class="w-[150px]"
+            icon="pi pi-map-marker"
+            severity="secondary"
+            @click="handlePickPosition(index)"
+            v-tooltip.top="'Chọn tọa độ'"
+          />
+        </div>
+        <div class="text-right">
+          <Button
+            class="w-[150px]"
+            label="Thêm vị trí"
+            icon="pi pi-plus"
+            severity="success"
+            @click="handleAddPosition"
+          />
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <Button label="Tải ảnh" severity="info" @click="download" class="!px-5" />
       </div>
 
       <ProgressBar
@@ -208,12 +289,29 @@ function handleDownloadImage(image, textInput) {
         Đang tải {{ downloadCountRef }} / {{ textInputComputed.length }} ảnh...
       </ProgressBar>
     </div>
-    <div class="mt-4">
-      <canvas
-        v-show="fileSelectedRef"
-        class="w-11/12 border h-auto mx-auto"
-        ref="canvasRef"
-      ></canvas>
+    <div class="w-full">
+      <p>Xem trước</p>
+      <canvas class="w-full border h-auto" ref="canvasRef">Preview</canvas>
     </div>
   </div>
+
+  <Drawer
+    v-model:visible="visibleImagePickerRef"
+    header="Chọn tọa độ"
+    position="full"
+    class="drawer-custom"
+  >
+    <img
+      src="#"
+      ref="imagePickerRef"
+      class="h-full w-auto mx-auto cursor-crosshair shadow"
+      @click="handleMouseMove"
+    />
+  </Drawer>
 </template>
+
+<style>
+.drawer-custom.p-drawer {
+  background: #f2f2f2;
+}
+</style>
