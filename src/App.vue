@@ -207,14 +207,13 @@ async function handlePickPosition(index) {
 
       <div class="w-full mb-4">
         <Textarea
-          class="w-full"
+          class="w-full whitespace-pre-line"
           v-model="textInputRef"
           rows="5"
-          placeholder="Muốn tạo nhiều ảnh thì mỗi text 1 dòng
+          placeholder="Muốn tạo nhiều ảnh thì mỗi text 1 dòng. Các vị trí sẽ được phân cách bằng dấu |
           Ví dụ:
-      anh A
-      chị B"
-          style="white-space: pre-line"
+      anh A|Mời anh
+      chị B|Mời chị"
         />
       </div>
 
@@ -290,8 +289,8 @@ async function handlePickPosition(index) {
       </ProgressBar>
     </div>
     <div class="w-full">
-      <p>Xem trước</p>
-      <canvas class="w-full border h-auto" ref="canvasRef">Preview</canvas>
+      <p class="font-bold">Xem trước</p>
+      <canvas class="w-full border h-auto max-w-screen-lg mx-auto" ref="canvasRef">Preview</canvas>
     </div>
   </div>
 
