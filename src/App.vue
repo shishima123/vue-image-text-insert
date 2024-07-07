@@ -210,7 +210,7 @@ async function handlePickPosition(index) {
           class="w-full whitespace-pre-line"
           v-model="textInputRef"
           rows="5"
-          placeholder="Muốn tạo nhiều ảnh thì mỗi text 1 dòng. Các vị trí sẽ được phân cách bằng dấu |
+          placeholder="Muốn tạo nhiều ảnh thì mỗi ảnh là 1 dòng text. Các vị trí sẽ được phân cách bằng dấu |
           Ví dụ:
       anh A|Mời anh
       chị B|Mời chị"
