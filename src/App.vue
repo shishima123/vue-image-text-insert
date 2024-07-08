@@ -2,17 +2,30 @@
 import { ref, computed, watch, nextTick } from 'vue'
 
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 const toast = useToast()
+const confirm = useConfirm()
 
 const textInputRef = ref()
 const canvasRef = ref()
 const downloadCountRef = ref(0)
 const fileSelectedRef = ref()
-const positionsRef = ref([{ x: 0, y: 0, size: 100, font: 'DFVNHelloHoney', color: '#ff0000' }])
+const positionDefault = {
+  x: 0,
+  y: 0,
+  size: 50,
+  font: 'DFVNHelloHoney',
+  color: '#ff0000',
+  textAlign: {
+    id: 'center',
+    label: 'Giữa'
+  }
+}
+const positionsRef = ref([positionDefault])
 const positionSelectedRef = ref()
 const visibleImagePickerRef = ref(false)
 const imagePickerRef = ref()
-const fonts = ref([
+const fonts = [
   'DFVNHelloHoney',
   'UVF-WazaLTPro',
   'LNTH-HotelLorint',
@@ -21,7 +34,21 @@ const fonts = ref([
   'Georgia',
   'Times New Roman',
   'Verdana'
-])
+]
+const textAligns = [
+  {
+    id: 'left',
+    label: 'Trái'
+  },
+  {
+    id: 'center',
+    label: 'Giữa'
+  },
+  {
+    id: 'right',
+    label: 'Phải'
+  }
+]
 
 const textInputComputed = computed(() => {
   if (textInputRef.value) {
@@ -121,7 +148,26 @@ function preview() {
   }
 }
 
-function download() {
+function confirmDownload(event) {
+  confirm.require({
+    target: event.currentTarget,
+    message: 'Xác nhận tải ảnh?',
+    header: 'Xác nhận',
+    icon: 'pi pi-info-circle',
+    rejectProps: {
+      label: 'Hủy',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'Tải'
+    },
+    accept: () => {
+      handleDownloadImage()
+    }
+  })
+}
+function handleDownloadImage() {
   downloadCountRef.value = 0
   if (!validate(true)) {
     return
@@ -132,7 +178,7 @@ function download() {
 
   image.onload = async function () {
     for (const textInput of textInputComputed.value) {
-      await handleDownloadImage(image, textInput)
+      await downloadImage(image, textInput)
     }
     toast.add({
       severity: 'success',
@@ -143,7 +189,7 @@ function download() {
   }
 }
 
-function handleDownloadImage(image, textInput) {
+function downloadImage(image, textInput) {
   return new Promise((resolve) => {
     setTimeout(function () {
       const tempCanvas = document.createElement('canvas')
@@ -170,19 +216,28 @@ function handleDownloadImage(image, textInput) {
 }
 
 function handleAddPosition() {
-  positionsRef.value.push({
-    x: 0,
-    y: 0,
-    size: 50,
-    font: 'DFVNHelloHoney',
-    color: '#ff0000'
-  })
+  positionsRef.value.push(positionDefault)
 }
 
-function handleMouseMove(event) {
-  positionsRef.value[positionSelectedRef.value].x = event.pageX - event.target.offsetLeft
-  positionsRef.value[positionSelectedRef.value].y = event.pageY - event.target.offsetTop
+function handlePositionPicker(event) {
+  let element = event.target
+  // Tính tỷ lệ thu nhỏ
+  const scaleX = element.naturalWidth / element.width
+  const scaleY = element.naturalHeight / element.height
+
+  // Tính tọa độ thật
+  let rect = event.target.getBoundingClientRect()
+  const xOriginal = (event.clientX - rect.left) * scaleX
+  const yOriginal = (event.clientY - rect.top) * scaleY
+
+  positionsRef.value[positionSelectedRef.value].x = Math.ceil(xOriginal)
+  positionsRef.value[positionSelectedRef.value].y = Math.ceil(yOriginal)
+
   visibleImagePickerRef.value = false
+}
+
+function handleRemovePosition(index) {
+  positionsRef.value.splice(index, 1)
 }
 
 async function handlePickPosition(index) {
@@ -224,37 +279,25 @@ async function handlePickPosition(index) {
           :key="index"
         >
           <span class="font-bold block"> Vị trí {{ index + 1 }} </span>
-          <InputNumber
-            id="xCoord"
-            v-model.number="position.x"
-            showButtons
-            inputClass="w-[100px]"
-            :min="0"
-          />
+          <InputNumber v-model.number="position.x" showButtons inputClass="w-[100px]" :min="0" />
 
-          <InputNumber
-            id="yCoord"
-            v-model.number="position.y"
-            showButtons
-            inputClass="w-[100px]"
-            :min="0"
-          />
+          <InputNumber v-model.number="position.y" showButtons inputClass="w-[100px]" :min="0" />
 
-          <InputNumber
-            id="fontSize"
-            v-model.number="position.size"
-            showButtons
-            inputClass="w-[75px]"
-            :min="1"
-          />
+          <InputNumber v-model.number="position.size" showButtons inputClass="w-[75px]" :min="1" />
 
-          <Select id="fontFamily" v-model="position.font" :options="fonts" class="w-[220px]" />
+          <Select v-model="position.font" :options="fonts" class="w-[195px]" />
 
           <input
-            id="color"
             type="color"
             v-model.lazy="position.color"
-            class="block h-[40px] px-2 py-1 w-[70px]"
+            class="block h-[40px] px-2 py-1 w-[45px]"
+          />
+
+          <Select
+            v-model="position.textAlign"
+            :options="textAligns"
+            class="w-[105px]"
+            optionLabel="label"
           />
 
           <Button
@@ -263,23 +306,28 @@ async function handlePickPosition(index) {
             severity="secondary"
             @click="handlePickPosition(index)"
             v-tooltip.top="'Chọn tọa độ'"
+            outlined
+          />
+          <Button
+            v-if="index > 0"
+            class="w-[150px]"
+            icon="pi pi-times"
+            severity="danger"
+            @click="handleRemovePosition(index)"
+            outlined
           />
         </div>
-        <div class="text-right">
+        <div>
           <Button
-            class="w-[150px]"
+            class="w-[150px] mr-5"
             label="Thêm vị trí"
             icon="pi pi-plus"
             severity="success"
             @click="handleAddPosition"
           />
+          <Button label="Tải ảnh" severity="info" @click="confirmDownload" class="!px-5" />
         </div>
       </div>
-
-      <div class="mt-4 text-center">
-        <Button label="Tải ảnh" severity="info" @click="download" class="!px-5" />
-      </div>
-
       <ProgressBar
         :value="Math.ceil((downloadCountRef / textInputComputed.length) * 100)"
         class="w-full mt-4"
@@ -299,14 +347,17 @@ async function handlePickPosition(index) {
     header="Chọn tọa độ"
     position="full"
     class="drawer-custom"
+    :blockScroll="true"
   >
     <img
       src="#"
       ref="imagePickerRef"
-      class="h-full w-auto mx-auto cursor-crosshair shadow"
-      @click="handleMouseMove"
+      class="h-full w-auto mx-auto shadow"
+      @click="handlePositionPicker"
     />
   </Drawer>
+
+  <ConfirmPopup></ConfirmPopup>
 </template>
 
 <style>
