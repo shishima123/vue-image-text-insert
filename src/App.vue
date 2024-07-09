@@ -21,10 +21,11 @@ const positionDefault = {
     label: 'Giữa'
   }
 }
-const positionsRef = ref([positionDefault])
+const positionsRef = ref([{ ...positionDefault }])
 const positionSelectedRef = ref()
 const visibleImagePickerRef = ref(false)
 const imagePickerRef = ref()
+const imagePickerDrawRef = ref()
 const fonts = [
   'DFVNHelloHoney',
   'UVF-WazaLTPro',
@@ -167,6 +168,7 @@ function confirmDownload(event) {
     }
   })
 }
+
 function handleDownloadImage() {
   downloadCountRef.value = 0
   if (!validate(true)) {
@@ -216,23 +218,14 @@ function downloadImage(image, textInput) {
 }
 
 function handleAddPosition() {
-  positionsRef.value.push(positionDefault)
+  positionsRef.value.push({ ...positionDefault })
 }
 
 function handlePositionPicker(event) {
-  let element = event.target
-  // Tính tỷ lệ thu nhỏ
-  const scaleX = element.naturalWidth / element.width
-  const scaleY = element.naturalHeight / element.height
+  let { xOriginal, yOriginal } = calcMouseCoordinates(event)
 
-  // Tính tọa độ thật
-  let rect = event.target.getBoundingClientRect()
-  const xOriginal = (event.clientX - rect.left) * scaleX
-  const yOriginal = (event.clientY - rect.top) * scaleY
-
-  positionsRef.value[positionSelectedRef.value].x = Math.ceil(xOriginal)
-  positionsRef.value[positionSelectedRef.value].y = Math.ceil(yOriginal)
-
+  positionsRef.value[positionSelectedRef.value].x = xOriginal
+  positionsRef.value[positionSelectedRef.value].y = yOriginal
   visibleImagePickerRef.value = false
 }
 
@@ -240,6 +233,7 @@ function handleRemovePosition(index) {
   positionsRef.value.splice(index, 1)
 }
 
+let ctxImagePickerDraw
 async function handlePickPosition(index) {
   if (!fileSelectedRef.value) {
     toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn File', life: 3000 })
@@ -249,6 +243,45 @@ async function handlePickPosition(index) {
   positionSelectedRef.value = index
   await nextTick()
   imagePickerRef.value.src = URL.createObjectURL(fileSelectedRef.value)
+
+  let ctx = imagePickerRef.value.getContext('2d')
+  ctxImagePickerDraw = imagePickerDrawRef.value.getContext('2d')
+
+  const image = new Image()
+  image.src = URL.createObjectURL(fileSelectedRef.value)
+  image.onload = function () {
+    imagePickerRef.value.width = image.width
+    imagePickerRef.value.height = image.height
+
+    imagePickerDrawRef.value.width = image.width
+    imagePickerDrawRef.value.height = image.height
+    ctx.drawImage(image, 0, 0)
+  }
+}
+
+function handleMouseMoveDrawText(event) {
+  let { xOriginal, yOriginal } = calcMouseCoordinates(event)
+  let positionSelected = positionsRef.value[positionSelectedRef.value]
+  if (imagePickerRef.value) {
+    ctxImagePickerDraw.clearRect(0, 0, imagePickerRef.value.width, imagePickerRef.value.height)
+    ctxImagePickerDraw.font = `${positionSelected.size}px ${positionSelected.font}`
+    ctxImagePickerDraw.fillStyle = `${positionSelected.color}`
+    ctxImagePickerDraw.fillText(textInputComputed.value[0]?.[0] || `Text`, xOriginal, yOriginal)
+  }
+}
+
+function calcMouseCoordinates(event) {
+  let element = event.target
+  // Tính tỷ lệ thu nhỏ
+  let rect = event.target.getBoundingClientRect()
+  const scaleX = element.width / rect.width
+  const scaleY = element.height / rect.height
+
+  // Tính tọa độ thật
+  const xOriginal = Math.ceil((event.clientX - rect.left) * scaleX)
+  const yOriginal = Math.ceil((event.clientY - rect.top) * scaleY)
+
+  return { xOriginal, yOriginal }
 }
 </script>
 
@@ -347,14 +380,16 @@ async function handlePickPosition(index) {
     header="Chọn tọa độ"
     position="full"
     class="drawer-custom"
-    :blockScroll="true"
   >
-    <img
-      src="#"
-      ref="imagePickerRef"
-      class="h-full w-auto mx-auto shadow"
-      @click="handlePositionPicker"
-    />
+    <div class="relative">
+      <canvas ref="imagePickerRef" class="w-full h-auto max-w-screen-lg mx-auto" />
+      <canvas
+        ref="imagePickerDrawRef"
+        class="w-full h-auto max-w-screen-lg absolute top-0 left-0"
+        @mousemove="handleMouseMoveDrawText"
+        @click="handlePositionPicker"
+      ></canvas>
+    </div>
   </Drawer>
 
   <ConfirmPopup></ConfirmPopup>
