@@ -4,21 +4,21 @@
 
 @font-face {
     font-family: 'DFVNHelloHoney';
-    src: url('../../public/fonts/DFVNHelloHoney.otf') format('truetype');
+    src: url('/fonts/DFVNHelloHoney.otf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'UVF-WazaLTPro';
-    src: url('../../public/fonts/UVF-WazaLTPro.ttf') format('truetype');
+    src: url('/fonts/UVF-WazaLTPro.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'LNTH-HotelLorint';
-    src: url('../../public/fonts/LNTH-HotelLorint.ttf') format('truetype');
+    src: url('/fonts/LNTH-HotelLorint.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }

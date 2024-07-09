@@ -140,11 +140,11 @@ function preview() {
     positionsRef.value.forEach((position, index) => {
       ctx.font = `${position.size}px ${position.font}`
       ctx.fillStyle = position.color
-      ctx.fillText(
-        textInputComputed.value[0]?.[index] || `Text ${index + 1}`,
-        position.x,
-        position.y
-      )
+
+      let text = textInputComputed.value[0]?.[index] || `Text ${index + 1}`
+      let textWidth = ctx.measureText(text).width
+      let x = calcXCoordByTextAlign(position.x, textWidth, position.textAlign.id)
+      ctx.fillText(text, x, position.y)
     })
   }
 }
@@ -202,7 +202,11 @@ function downloadImage(image, textInput) {
       positionsRef.value.forEach((position, index) => {
         tempCtx.font = `${position.size}px ${position.font}`
         tempCtx.fillStyle = position.color
-        tempCtx.fillText(textInput?.[index] || '', position.x, position.y)
+
+        let text = textInput?.[index] || ''
+        let textWidth = tempCtx.measureText(text).width
+        let x = calcXCoordByTextAlign(position.x, textWidth, position.textAlign.id)
+        tempCtx.fillText(text, x, position.y)
       })
 
       const link = document.createElement('a')
@@ -215,6 +219,15 @@ function downloadImage(image, textInput) {
       return resolve()
     }, 500)
   })
+}
+
+function calcXCoordByTextAlign(x, textWidth, textAlignId) {
+  if (textAlignId === 'center') {
+    x = x - textWidth / 2
+  } else if (textAlignId === 'right') {
+    x = x - textWidth
+  }
+  return x
 }
 
 function handleAddPosition() {
@@ -266,7 +279,13 @@ function handleMouseMoveDrawText(event) {
     ctxImagePickerDraw.clearRect(0, 0, imagePickerRef.value.width, imagePickerRef.value.height)
     ctxImagePickerDraw.font = `${positionSelected.size}px ${positionSelected.font}`
     ctxImagePickerDraw.fillStyle = `${positionSelected.color}`
-    ctxImagePickerDraw.fillText(textInputComputed.value[0]?.[0] || `Text`, xOriginal, yOriginal)
+
+    let text =
+      textInputComputed.value[0]?.[positionSelectedRef.value] ||
+      `Text ${positionSelectedRef.value + 1}`
+    let textWidth = ctxImagePickerDraw.measureText(text).width
+    xOriginal = calcXCoordByTextAlign(xOriginal, textWidth, positionSelected?.textAlign?.id)
+    ctxImagePickerDraw.fillText(text, xOriginal, yOriginal)
   }
 }
 
@@ -382,7 +401,7 @@ function calcMouseCoordinates(event) {
     class="drawer-custom"
   >
     <div class="relative">
-      <canvas ref="imagePickerRef" class="w-full h-auto max-w-screen-lg mx-auto" />
+      <canvas ref="imagePickerRef" class="w-full h-auto max-w-screen-lg" />
       <canvas
         ref="imagePickerDrawRef"
         class="w-full h-auto max-w-screen-lg absolute top-0 left-0"
