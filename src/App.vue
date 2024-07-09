@@ -26,6 +26,7 @@ const positionSelectedRef = ref()
 const visibleImagePickerRef = ref(false)
 const imagePickerRef = ref()
 const imagePickerDrawRef = ref()
+const downloadLoading = ref(false)
 const fonts = [
   'DFVNHelloHoney',
   'UVF-WazaLTPro',
@@ -170,6 +171,7 @@ function confirmDownload(event) {
 }
 
 function handleDownloadImage() {
+  downloadLoading.value = true
   downloadCountRef.value = 0
   if (!validate(true)) {
     return
@@ -188,6 +190,7 @@ function handleDownloadImage() {
       detail: 'Tất cả ảnh đã được tải về',
       life: 3000
     })
+    downloadLoading.value = false
   }
 }
 
@@ -369,7 +372,7 @@ function calcMouseCoordinates(event) {
             outlined
           />
         </div>
-        <div>
+        <div class="flex items-center">
           <Button
             class="w-[150px] mr-5"
             label="Thêm vị trí"
@@ -377,16 +380,19 @@ function calcMouseCoordinates(event) {
             severity="success"
             @click="handleAddPosition"
           />
-          <Button label="Tải ảnh" severity="info" @click="confirmDownload" class="!px-5" />
+          <Button
+            label="Tải ảnh"
+            severity="info"
+            @click="confirmDownload"
+            class="!px-5 mr-5"
+            :loading="downloadLoading"
+          />
+
+          <Message severity="secondary" v-if="downloadCountRef">
+            Đã tải: {{ downloadCountRef }} / {{ textInputComputed.length }} ảnh
+          </Message>
         </div>
       </div>
-      <ProgressBar
-        :value="Math.ceil((downloadCountRef / textInputComputed.length) * 100)"
-        class="w-full mt-4"
-        v-if="downloadCountRef"
-      >
-        Đang tải {{ downloadCountRef }} / {{ textInputComputed.length }} ảnh...
-      </ProgressBar>
     </div>
     <div class="w-full">
       <p class="font-bold">Xem trước</p>
