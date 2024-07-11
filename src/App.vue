@@ -340,18 +340,36 @@ function calcMouseCoordinates(event) {
           :key="index"
         >
           <span class="font-bold block"> Vị trí {{ index + 1 }} </span>
-          <InputNumber v-model.number="position.x" showButtons inputClass="w-[100px]" :min="0" />
+          <InputNumber
+            v-model.number="position.x"
+            showButtons
+            inputClass="w-[100px]"
+            :min="0"
+            v-tooltip.top="{ value: 'Tọa độ X', showDelay: 500 }"
+          />
 
-          <InputNumber v-model.number="position.y" showButtons inputClass="w-[100px]" :min="0" />
+          <InputNumber
+            v-model.number="position.y"
+            showButtons
+            inputClass="w-[100px]"
+            :min="0"
+            v-tooltip.top="{ value: 'Tọa độ Y', showDelay: 500 }"
+          />
 
-          <InputNumber v-model.number="position.size" showButtons inputClass="w-[75px]" :min="1" />
+          <InputNumber
+            v-model.number="position.size"
+            showButtons
+            inputClass="w-[75px]"
+            :min="1"
+            v-tooltip.top="{ value: 'Cỡ chữ', showDelay: 500 }"
+          />
 
           <Select v-model="position.font" :options="fonts" class="w-[195px]" />
 
           <input
             type="color"
             v-model.lazy="position.color"
-            class="block h-[40px] px-2 py-1 w-[45px]"
+            class="block h-[40px] px-2 py-1 w-[45px] cursor-pointer"
           />
 
           <Select
