@@ -1,14 +1,10 @@
 # vue-image-text-insert
 
-This template should help get you started developing with Vue 3 in Vite.
+vue image text insert
 
-## Recommended IDE Setup
+## GitHub Pages
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+https://shishima123.github.io/vue-image-text-insert/
 
 ## Project Setup
 
