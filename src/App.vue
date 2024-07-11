@@ -250,6 +250,7 @@ function handleRemovePosition(index) {
 }
 
 let ctxImagePickerDraw
+let clonePositions
 async function handlePickPosition(index) {
   if (!fileSelectedRef.value) {
     toast.add({ severity: 'error', summary: 'Lỗi', detail: 'Chưa Chọn File', life: 3000 })
@@ -257,6 +258,7 @@ async function handlePickPosition(index) {
   }
   visibleImagePickerRef.value = true
   positionSelectedRef.value = index
+  clonePositions = JSON.parse(JSON.stringify(positionsRef.value))
   await nextTick()
   imagePickerRef.value.src = URL.createObjectURL(fileSelectedRef.value)
 
@@ -277,18 +279,22 @@ async function handlePickPosition(index) {
 
 function handleMouseMoveDrawText(event) {
   let { xOriginal, yOriginal } = calcMouseCoordinates(event)
-  let positionSelected = positionsRef.value[positionSelectedRef.value]
   if (imagePickerRef.value) {
+    clonePositions[positionSelectedRef.value].x = xOriginal
+    clonePositions[positionSelectedRef.value].y = yOriginal
     ctxImagePickerDraw.clearRect(0, 0, imagePickerRef.value.width, imagePickerRef.value.height)
-    ctxImagePickerDraw.font = `${positionSelected.size}px ${positionSelected.font}`
-    ctxImagePickerDraw.fillStyle = `${positionSelected.color}`
 
-    let text =
-      textInputComputed.value[0]?.[positionSelectedRef.value] ||
-      `Text ${positionSelectedRef.value + 1}`
-    let textWidth = ctxImagePickerDraw.measureText(text).width
-    xOriginal = calcXCoordByTextAlign(xOriginal, textWidth, positionSelected?.textAlign?.id)
-    ctxImagePickerDraw.fillText(text, xOriginal, yOriginal)
+    for (let i = 0, len = clonePositions.length; i < len; i++) {
+      let position = clonePositions[i]
+
+      ctxImagePickerDraw.font = `${position.size}px ${position.font}`
+      ctxImagePickerDraw.fillStyle = `${position.color}`
+
+      let text = textInputComputed.value[0]?.[i] || `Text ${i + 1}`
+      let textWidth = ctxImagePickerDraw.measureText(text).width
+      xOriginal = calcXCoordByTextAlign(position.x, textWidth, position?.textAlign?.id)
+      ctxImagePickerDraw.fillText(text, xOriginal, position.y)
+    }
   }
 }
 
